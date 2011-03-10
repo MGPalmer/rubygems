@@ -144,22 +144,29 @@ class Gem::Commands::UpdateCommand < Gem::Command
       requirement = Gem::Requirement.new version
     end
 
-    rubygems_update         = Gem::Specification.new
-    rubygems_update.name    = 'rubygems-update'
-    rubygems_update.version = version
+    dependency = Gem::Dependency.new 'rubygems-update', requirement
 
-    hig = {
-      'rubygems-update' => rubygems_update
-    }
+    fetcher = Gem::SpecFetcher.fetcher
+    spec_tuples = fetcher.find_matching dependency, true
 
-    gems_to_update = which_to_update hig, options[:args]
+    matching_gems = spec_tuples.select do |(name, _, platform),|
+      name == 'rubygems-update' and Gem::Platform.match platform
+    end
 
-    if gems_to_update.empty? then
-      say "Latest version currently installed. Aborting."
+    highest_remote_or_requested_gem = matching_gems.sort_by do |(_, version),|
+      version
+    end.last
+
+    if highest_remote_or_requested_gem.nil?
+      if version == true
+        say "Latest version currently installed. Aborting."
+      else
+        say "rubygems-update #{version} not found. Aborting."
+      end
       terminate_interaction
     end
 
-    update_gem gems_to_update.first, requirement
+    update_gem 'rubygems-update', requirement
 
     Gem.source_index.refresh!
 
