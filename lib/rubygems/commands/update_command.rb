@@ -135,13 +135,15 @@ class Gem::Commands::UpdateCommand < Gem::Command
 
     options[:user_install] = false
 
-    version = options[:system]
-    if version == true then
-      version     = Gem::Version.new     Gem::VERSION
-      requirement = Gem::Requirement.new ">= #{Gem::VERSION}"
+    options_version = options[:system]
+    update_to_latest = options_version == true
+
+    if update_to_latest
+      requested_version     = Gem::Version.new     Gem::VERSION
+      requirement = Gem::Requirement.new "> #{Gem::VERSION}"
     else
-      version     = Gem::Version.new     version
-      requirement = Gem::Requirement.new version
+      requested_version     = Gem::Version.new     options_version
+      requirement = Gem::Requirement.new options_version
     end
 
     dependency = Gem::Dependency.new 'rubygems-update', requirement
@@ -153,15 +155,15 @@ class Gem::Commands::UpdateCommand < Gem::Command
       name == 'rubygems-update' and Gem::Platform.match platform
     end
 
-    highest_remote_or_requested_gem = matching_gems.sort_by do |(_, version),|
-      version
+    highest_remote_or_requested_gem = matching_gems.sort_by do |(_, sort_version),|
+      sort_version
     end.last
 
     if highest_remote_or_requested_gem.nil?
-      if version == true
+      if update_to_latest
         say "Latest version currently installed. Aborting."
       else
-        say "rubygems-update #{version} not found. Aborting."
+        say "rubygems-update #{requested_version} not found. Aborting."
       end
       terminate_interaction
     end
@@ -171,7 +173,7 @@ class Gem::Commands::UpdateCommand < Gem::Command
     Gem.source_index.refresh!
 
     installed_gems = Gem.source_index.find_name 'rubygems-update', requirement
-    version        = installed_gems.last.version
+    install_version        = installed_gems.last.version
 
     args = []
     args << '--prefix' << Gem.prefix if Gem.prefix
@@ -179,10 +181,10 @@ class Gem::Commands::UpdateCommand < Gem::Command
     args << '--no-ri' unless options[:generate_ri]
     args << '--no-format-executable' if options[:no_format_executable]
 
-    update_dir = File.join Gem.dir, 'gems', "rubygems-update-#{version}"
+    update_dir = File.join Gem.dir, 'gems', "rubygems-update-#{install_version}"
 
     Dir.chdir update_dir do
-      say "Installing RubyGems #{version}"
+      say "Installing RubyGems #{install_version}"
       setup_cmd = "#{Gem.ruby} setup.rb #{args.join ' '}"
 
       # Make sure old rubygems isn't loaded
