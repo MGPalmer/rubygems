@@ -89,7 +89,7 @@ class Gem::Commands::ContentsCommand < Gem::Command
                 Dir[glob]
               else
                 Dir[File.join(gem_path, '**/*')]
-              end
+              end.sort.reverse # Dir.glob order can't be guaranteed
 
       gem_path = File.join gem_path, '' # to strip trailing /
 
